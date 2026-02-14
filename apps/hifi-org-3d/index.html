@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HIFI 3D Org Chart</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #info { position: fixed; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; pointer-events: none; border-left: 4px solid #00d4ff; display: none; transition: opacity 0.2s; }
+        #overlay { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 15, 0.95); color: white; padding: 40px; border-radius: 12px; border: 1px solid #333; display: none; min-width: 300px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #overlay h2 { margin-top: 0; }
+        #overlay button { margin-top: 20px; padding: 10px 20px; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #overlay button:hover { background: #444; }
+    </style>
+</head>
+<body>
+    <div id="info"></div>
+    <div id="overlay">
+        <h2 id="pod-name"></h2>
+        <p id="pod-desc"></p>
+        <button onclick="closeOverlay()">Close</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Pods Data
+        const pods = [
+            { name: "Engineering", color: 0x00d4ff, angle: 0, desc: "Building the core HIFI infrastructure and protocols." },
+            { name: "Compliance", color: 0xff4444, angle: Math.PI / 2, desc: "Ensuring regulatory excellence and risk management." },
+            { name: "Marketing", color: 0xffd700, angle: Math.PI, desc: "Driving brand awareness and community engagement." },
+            { name: "GTM", color: 0x44ff44, angle: -Math.PI / 2, desc: "Go-to-market strategies and institutional partnerships." }
+        ];
+
+        const sphereMeshes = [];
+
+        pods.forEach(p => {
+            const group = new THREE.Group();
+            
+            // Sphere
+            const geometry = new THREE.SphereGeometry(0.8, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: p.color,
+                emissive: p.color,
+                emissiveIntensity: 0.2,
+                shininess: 100
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            
+            group.position.x = Math.cos(p.angle) * 4;
+            group.position.z = Math.sin(p.angle) * 4;
+            
+            sphere.userData = p;
+            group.add(sphere);
+            scene.add(group);
+            sphereMeshes.push(sphere);
+        });
+
+        camera.position.set(0, 5, 10);
+        controls.update();
+
+        // Interaction
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const info = document.getElementById('info');
+        const overlay = document.getElementById('overlay');
+
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        window.addEventListener('click', () => {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(sphereMeshes);
+            if (intersects.length > 0) {
+                const pod = intersects[0].object.userData;
+                showOverlay(pod);
+            }
+        });
+
+        function showOverlay(pod) {
+            document.getElementById('pod-name').innerText = pod.name;
+            document.getElementById('pod-name').style.color = '#' + pod.color.toString(16).padStart(6, '0');
+            document.getElementById('pod-desc').innerText = pod.desc;
+            overlay.style.display = 'block';
+        }
+
+        function closeOverlay() {
+            overlay.style.display = 'none';
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            controls.update();
+
+            // Raycasting for hover
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(sphereMeshes);
+
+            if (intersects.length > 0) {
+                const pod = intersects[0].object.userData;
+                info.style.display = 'block';
+                info.innerText = pod.name;
+                info.style.borderLeftColor = '#' + pod.color.toString(16).padStart(6, '0');
+                document.body.style.cursor = 'pointer';
+            } else {
+                info.style.display = 'none';
+                document.body.style.cursor = 'default';
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
