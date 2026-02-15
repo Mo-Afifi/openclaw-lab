@@ -158,6 +158,36 @@
         apacGroup.scale.set(0.6, 0.6, 0.6);
         worldGroup.add(apacGroup);
 
+        // --- Labels ---
+        function createLabel(text, position, parent) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 512;
+            canvas.height = 128;
+            
+            context.font = 'Bold 80px Inter, Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            
+            // Neon Glow Style
+            context.shadowColor = '#ffffff';
+            context.shadowBlur = 20;
+            context.fillStyle = '#ffffff';
+            context.fillText(text, 256, 64);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            
+            sprite.position.copy(position);
+            sprite.scale.set(15, 3.75, 1);
+            parent.add(sprite);
+        }
+
+        createLabel("HIFI", new THREE.Vector3(0, 15, 0), group);
+        createLabel("HIFI MENA", new THREE.Vector3(0, 15, 0), menaGroup);
+        createLabel("HIFI APAC", new THREE.Vector3(0, 15, 0), apacGroup);
+
         // --- Interaction State ---
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
