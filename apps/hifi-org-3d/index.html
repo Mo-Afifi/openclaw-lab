@@ -154,7 +154,7 @@
         const barrelNodes = [];
         const lightningLines = [];
 
-        // LAYER 1: CORE
+        // LAYER 1: CORE (2 nodes: Mo, Zack)
         function createCore() {
             const coreGroup = new THREE.Group();
             
@@ -192,10 +192,9 @@
             pulse();
         }
 
-        // LAYER 2: BARREL RING
+        // LAYER 2: BARREL RING (Ring 1: 5 nodes)
         function createBarrels() {
             BARRELS.forEach((b, i) => {
-                const barrelPivot = new THREE.Group();
                 const mesh = new THREE.Mesh(
                     new THREE.BoxGeometry(1.8, 1.8, 1.8),
                     new THREE.MeshBasicMaterial({ color: b.color })
@@ -238,39 +237,49 @@
             });
         }
 
-        // LAYER 3: SWAT RING
+        // LAYER 3 & 4: SWAT RINGS (Ring 2: 10, Ring 3: 10, Ring 4: 20)
+        // Total FTEs = 40 (previous logic was creating 45)
+        // Total nodes: 2 (Core) + 5 (Barrels) + 10 + 10 + 20 = 47
         function createFTEs() {
-            for (let i = 1; i <= 45; i++) {
-                const ringId = Math.floor((i-1) / 15); // 3 rings
-                const radius = 18 + ringId * 4;
-                const angle = ((i-1) % 15) * (Math.PI * 2 / 15);
-                
-                const mesh = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.5, 16, 16),
-                    new THREE.MeshBasicMaterial({ color: COLORS.FTE })
-                );
-                
-                const x = Math.cos(angle) * radius;
-                const z = Math.sin(angle) * radius;
-                mesh.position.set(x, 0, z);
-                
-                mesh.userData = {
-                    id: i,
-                    name: `Unit ${String(i).padStart(2, '0')}`,
-                    type: 'fte',
-                    ringRadius: radius,
-                    originalAngle: angle,
-                    orbitSpeed: 0.001 + Math.random() * 0.002,
-                    tasks: [
-                        TASK_TYPES[Math.floor(Math.random() * TASK_TYPES.length)],
-                        TASK_TYPES[Math.floor(Math.random() * TASK_TYPES.length)]
-                    ],
-                    state: 'orbiting' // orbiting, teaming
-                };
-                
-                group.add(mesh);
-                ftes.push(mesh);
-            }
+            const DISTRIBUTION = [
+                { count: 10, radius: 18 }, // Ring 2
+                { count: 10, radius: 24 }, // Ring 3
+                { count: 20, radius: 32 }  // Ring 4
+            ];
+
+            let globalCounter = 1;
+            DISTRIBUTION.forEach((ringDef, ringIndex) => {
+                for (let i = 0; i < ringDef.count; i++) {
+                    const angle = (i / ringDef.count) * (Math.PI * 2);
+                    
+                    const mesh = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.5, 16, 16),
+                        new THREE.MeshBasicMaterial({ color: COLORS.FTE })
+                    );
+                    
+                    const x = Math.cos(angle) * ringDef.radius;
+                    const z = Math.sin(angle) * ringDef.radius;
+                    mesh.position.set(x, 0, z);
+                    
+                    mesh.userData = {
+                        id: globalCounter,
+                        name: `Unit ${String(globalCounter).padStart(2, '0')}`,
+                        type: 'fte',
+                        ringRadius: ringDef.radius,
+                        originalAngle: angle,
+                        orbitSpeed: 0.0005 + Math.random() * 0.001,
+                        tasks: [
+                            TASK_TYPES[Math.floor(Math.random() * TASK_TYPES.length)],
+                            TASK_TYPES[Math.floor(Math.random() * TASK_TYPES.length)]
+                        ],
+                        state: 'orbiting'
+                    };
+                    
+                    group.add(mesh);
+                    ftes.push(mesh);
+                    globalCounter++;
+                }
+            });
         }
 
         // JEFF Energy Hub
@@ -426,8 +435,15 @@
                     `;
                     obj.scale.set(1.5, 1.5, 1.5);
                     hoveredObject = obj;
-                } else if (obj.userData.type === 'barrel') {
-                     // Barrel highlighting?
+                } else if (obj.userData.type === 'barrel' || obj.userData.type === 'core') {
+                    const tooltip = document.getElementById('tooltip');
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = e.clientX + 10 + 'px';
+                    tooltip.style.top = e.clientY + 10 + 'px';
+                    tooltip.innerHTML = `
+                        <div class="tooltip-name">${obj.userData.name}</div>
+                        <div class="tooltip-tasks">Core Architecture Node</div>
+                    `;
                 }
             } else {
                 document.getElementById('tooltip').style.display = 'none';
